@@ -1,0 +1,11 @@
+NFL Prediction Model Ideas
+
+	Baseline: Linear regression + lasso/ridge
+	Simple: xgboost/lightgbm
+	
+	Timeseries: LSTMs/Temporal Convolution Networks
+	
+	Hybrid: 
+		-Stacked Models: xgboost for feature extraction + neural net for temporal dependencies
+		-Simulation: monte carlo informed on predictive distributions 
+		-Player Archetypes: Cluster players into similar styles (e.g., “workhorse RB” vs. “third-down RB”) and predict within clusters.
