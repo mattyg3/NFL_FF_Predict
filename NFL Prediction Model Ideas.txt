@@ -1,11 +1,54 @@
 NFL Prediction Model Ideas
 
-	Baseline: Linear regression + lasso/ridge
+BRAINSTORM
+
+	Baseline: Ridge Regression (for yards) + XGBoost (for TD probability).
+
+	Advanced: LSTM or Transformer sequence model that takes in a player’s last N games + opponent features to predict next game stats.
+
+	Baseline: 
+		cont: Linear regression + lasso/ridge
+		binary: logistic regression
+
 	Simple: xgboost/lightgbm
 	
-	Timeseries: LSTMs/Temporal Convolution Networks
+	Timeseries: LSTMs/Temporal Convolution Networks/RNNs
 	
 	Hybrid: 
 		-Stacked Models: xgboost for feature extraction + neural net for temporal dependencies
 		-Simulation: monte carlo informed on predictive distributions 
 		-Player Archetypes: Cluster players into similar styles (e.g., “workhorse RB” vs. “third-down RB”) and predict within clusters.
+
+	
+
+	Simple Pipeline:
+		Feature engineering (player, team, matchup, context).
+
+		Gradient boosted trees for structured/tabular prediction.
+
+		Sequential model (LSTM/Transformer) for time dependencies.
+
+		Ensemble the outputs for final prediction.
+
+
+
+
+	Evaluation Metrics:
+
+		Continuous stats (yards, receptions, carries): MAE, RMSE.
+
+		Probabilistic outcomes (TDs, receptions ≥ X): Brier score, log loss, calibration curves.
+
+		Fantasy relevance: Compare predicted fantasy points vs. actual (PPR, half-PPR, standard).
+
+
+
+	Feature Engineering: rolling averages, strength of schedule adjustments, pace, Vegas lines are often more predictive than raw stats.
+
+	Ensembles: combining linear + tree-based + neural nets often boosts accuracy.
+
+	Regular Updates: NFL is dynamic (injuries, depth chart changes), so retraining weekly with up-to-date data helps.
+
+
+
+PLAN FORWARD
