@@ -52,3 +52,5 @@ BRAINSTORM
 
 
 PLAN FORWARD
+-function to ID active players for quicker updating runs
+-figure out way to eliminate players by gamelog "Date"
