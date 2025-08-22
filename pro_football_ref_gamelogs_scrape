@@ -1,5 +1,5 @@
-import time
-start = time.perf_counter()
+# import time
+# start = time.perf_counter()
 
 from utility_scripts.scraper_utils import pull_gamelogs, get_player_hrefs
 
@@ -7,10 +7,13 @@ import string
 letters = list(string.ascii_uppercase)
 
 
-href_list = get_player_hrefs(letters)
-qb, rb, wr, te  = pull_gamelogs(href_list)
+href_pdf = get_player_hrefs(letters)
+print(f"Total Player Count to Pull: {href_pdf.shape[0]}")
+print(href_pdf)
+results = pull_gamelogs(href_pdf)
 
-qb.to_csv('dev_files/test_game_log_QB.csv', index=False)
-rb.to_csv('dev_files/test_game_log_RB.csv', index=False)
-wr.to_csv('dev_files/test_game_log_WR.csv', index=False)
-te.to_csv('dev_files/test_game_log_TE.csv', index=False)
+results["QB_gamelogs"].to_csv('scraped_data/SB_ERA_game_logs_QB.csv', index=False)
+results["RB_gamelogs"].to_csv('scraped_data/SB_ERA_game_logs_RB.csv', index=False)
+results["WR_gamelogs"].to_csv('scraped_data/SB_ERA_game_logs_WR.csv', index=False)
+results["TE_gamelogs"].to_csv('scraped_data/SB_ERA_game_logs_TE.csv', index=False)
+

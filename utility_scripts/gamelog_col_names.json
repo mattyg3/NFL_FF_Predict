@@ -1,8 +1,11 @@
 {
   "QB_columns": [
-    "Player_Name",	
-    "Player_Position",	
-    "Player_College",
+    "href",
+    "player_name",	
+    "player_position",	
+    "player_college",
+    "start_year",
+    "end_year",
     "Rk",	
     "Gcar",
     "Gtm",	
@@ -34,9 +37,12 @@
   ],
 
    "RB_columns": [
-    "Player_Name",	
-    "Player_Position",	
-    "Player_College",
+    "href",
+    "player_name",	
+    "player_position",	
+    "player_college",
+    "start_year",
+    "end_year",
     "Rk",	
     "Gcar",
     "Gtm",	
@@ -64,9 +70,12 @@
   ],
 
    "WR_columns": [
-    "Player_Name",	
-    "Player_Position",	
-    "Player_College",
+    "href",
+    "player_name",	
+    "player_position",	
+    "player_college",
+    "start_year",
+    "end_year",
     "Rk",	
     "Gcar",
     "Gtm",	
@@ -94,9 +103,12 @@
   ],
 
    "TE_columns": [
-    "Player_Name",	
-    "Player_Position",	
-    "Player_College",
+    "href",
+    "player_name",	
+    "player_position",	
+    "player_college",
+    "start_year",
+    "end_year",
     "Rk",	
     "Gcar",
     "Gtm",	
