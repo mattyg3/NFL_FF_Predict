@@ -21,12 +21,13 @@ Functions:
 
 Constants:
     POS_LIST (list): Supported positions for scraping gamelogs (QB, RB, WR, TE).
+    DATE_CUTOFF (date): Earliest date for pulling gamelogs
 """
 
 POS_LIST = ['QB', 'RB', 'WR', 'TE']
 
 import pandas as pd
-# DATE_CUTOFF = pd.to_datetime("1966-06-01", format="%Y-%m-%d")
+DATE_CUTOFF = pd.to_datetime("1966-06-01", format="%Y-%m-%d")
 
 # import numpy as np
 import bs4
@@ -158,7 +159,10 @@ def safe_concat(df: pd.DataFrame, new_df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Combined DataFrame with consistent None-filled columns.
     """
-    df = pd.concat([df, new_df], ignore_index=True)
+    if df.shape[0] > 0:
+        df = pd.concat([df, new_df], ignore_index=True)
+    else:
+        df = new_df
     return df.where(pd.notnull(df), None)
 
 
@@ -195,15 +199,9 @@ def pull_gamelogs(href_list):
 
     COUNTER=0
     for href in href_list:
-
-        ##DELETE##
-        if COUNTER > 100:
-            break
-        ##########
-
         COUNTER+=1
-        # if COUNTER % 50 == 0:
-        print(f"Iteration: {COUNTER}")
+        if COUNTER % 50 == 0:
+            print(f"Iteration: {COUNTER}")
 
         url_s = 'https://www.pro-football-reference.com' + href + '/gamelog/'
 
@@ -213,10 +211,7 @@ def pull_gamelogs(href_list):
         meta_info = get_player_metadata(soup)
         
         if meta_info["player_position"] not in POS_LIST:
-            continue ##maybe need to check each position indv.
-        # for pos in POS_LIST:
-            # if meta_info["player_position"] != pos:
-                # continue ##skip this iteration
+            continue
         else:
             df = pd.read_html(url_s)[0]
             df = pd.DataFrame(df)
@@ -243,15 +238,24 @@ def pull_gamelogs(href_list):
             
 
             df = df.set_axis(col_names, axis=1)
-            # df = df[pd.to_datetime(df["Date"], format="%Y-%m-%d") >= DATE_CUTOFF]
+
             df = df[df["Rk"] != "Rk"]
             df = df[~(pd.isna(df["Rk"]))]
+
+            df["Date"] = pd.to_datetime(df["Date"])
+            df = df[df["Date"] >= DATE_CUTOFF]
+
             df["AT"] = df["AT"].apply(lambda x: 1 if x == "@" else 0)
             df["GS"] = df["GS"].apply(lambda x: 1 if x == "*" else 0)
 
             df["Player_Name"] = meta_info["player_name"]
+            # print(meta_info["player_name"])
             df["Player_Position"] = meta_info["player_position"]
             df["Player_College"] = meta_info["player_college"]
+            # print(df)
+
+            if COUNTER % 50 == 0:
+                print(f"Player: {meta_info["player_name"]}")
 
             if (meta_info["player_position"] == 'QB') & (df.shape[0] > 0):
                 qb_pdf = safe_concat(qb_pdf, df)
@@ -270,3 +274,5 @@ def pull_gamelogs(href_list):
 
 
     return qb_pdf, rb_pdf, wr_pdf, te_pdf
+
+# def find_active_hrefs()
