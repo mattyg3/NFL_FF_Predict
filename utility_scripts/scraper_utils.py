@@ -110,6 +110,7 @@ def get_player_hrefs(letters):
     name_list, roles_list, start_year_list, end_year_list = [],[],[],[]
 
     for alpha in letters:
+        print(f"Pulling from: {alpha}")
         url_s =  'https://www.pro-football-reference.com/players/' + alpha + '/'
 
         html_raw = get_html_w_selenium(url_s)
@@ -292,7 +293,7 @@ def pull_gamelogs(href_pdf: list[str]):
     print("\n\nPulling player gamelogs...")
     for row in href_pdf.itertuples(index=False):
         COUNTER+=1
-        if COUNTER % 500 == 0:
+        if COUNTER % 50 == 0:
             print(f"Iteration: {COUNTER}")
             end = time.perf_counter()
             print(f"Execution time: {(end - start)/60:.2f} mins")

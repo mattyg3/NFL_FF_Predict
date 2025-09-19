@@ -210,3 +210,4 @@ __marimo__/
 # dev_screenshots/
 dev_files/
 test_scraper.py
+test_script.py
