@@ -365,9 +365,9 @@ def pull_gamelogs(href_pdf: list[str]):
         elif (row.player_position == 'TE')  & (df.shape[0] > 0):
             te_pdf = safe_concat(te_pdf, df, te_cols)
         else: 
-            print("nothing appended...")
+            print(f"skipped href: {row.href}; nothing appended...")
             continue
-
+ 
     print("Completed pulling player gamelogs...")
     end_total = time.perf_counter()
     print(f"Total Execution time: {(end_total - start_total)/3600:.2f} hours")
