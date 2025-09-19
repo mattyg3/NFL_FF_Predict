@@ -339,7 +339,7 @@ def pull_gamelogs(href_pdf: list[str]):
             df = df[df["Rk"] != "Rk"]
             df = df[~(pd.isna(df["Rk"]))]
         except:
-            print(f"skipped href: {row.href}")
+            print(f"iter: {COUNTER}, skipped href: {row.href}")
             continue
 
         # df["Date"] = pd.to_datetime(df["Date"])
