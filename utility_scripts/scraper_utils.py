@@ -36,6 +36,7 @@ YEAR_CUTOFF = 1980
 import bs4
 import re
 import time
+from tqdm import tqdm
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 import json
@@ -45,6 +46,38 @@ import json
 
 import asyncio
 from playwright.async_api import async_playwright
+
+# def get_html_w_playwright(url: str) -> str:
+#     with sync_playwright() as p:
+#         # Launch Firefox headless, create realistic user-agent
+#             browser = p.firefox.launch( headless=True) #proxy={"server": proxy_url},
+#             context = browser.new_context(
+#                 viewport={"width": 1920, "height": 1080},
+#                 user_agent=(
+#                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+#                     "AppleWebKit/537.36 (KHTML, like Gecko) "
+#                     "Chrome/120.0.0.0 Safari/537.36"
+#                 ),
+#             )
+
+#             # Block images and CSS for faster loading
+#             context.route("**/*", lambda route: (
+#                 route.abort()
+#                 if route.request.resource_type in ("image", "stylesheet")
+#                 else route.continue_()
+#             ))
+
+#             page = context.new_page()
+#             # await page.goto(url, wait_until="domcontentloaded")
+#             page.goto(url, wait_until="networkidle")
+
+#             # Grab raw HTML
+#             html_raw = page.content()
+
+#             browser.close()
+#             time.sleep(2)
+#             return html_raw
+
 
 async def get_html_w_playwright(url: str) -> str:
     """
@@ -58,10 +91,15 @@ async def get_html_w_playwright(url: str) -> str:
         str: Raw HTML content of the webpage.
     """
     async with async_playwright() as p:
-        # Launch Firefox headless
+        # Launch Firefox headless, create realistic user-agent
         browser = await p.firefox.launch(headless=True)
         context = await browser.new_context(
-            viewport={"width": 1920, "height": 1080}
+            viewport={"width": 1920, "height": 1080},
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
         )
 
         # Block images and CSS for faster loading
@@ -73,11 +111,13 @@ async def get_html_w_playwright(url: str) -> str:
 
         page = await context.new_page()
         await page.goto(url, wait_until="domcontentloaded")
+        # await page.goto(url, wait_until="networkidle")
 
         # Grab raw HTML
         html_raw = await page.content()
 
         await browser.close()
+        time.sleep(1)
         return html_raw
 
 
@@ -147,7 +187,7 @@ def get_player_hrefs(letters):
     name_list, roles_list, start_year_list, end_year_list = [],[],[],[]
 
     for alpha in letters:
-        print(f"Pulling from: {alpha}")
+        # print(f"Pulling from: {alpha}")
         url_s =  'https://www.pro-football-reference.com/players/' + alpha + '/'
 
         html_raw = asyncio.run(get_html_w_playwright(url_s))
@@ -322,94 +362,106 @@ def pull_gamelogs(href_pdf: list[str]):
     rb_pdf = pd.DataFrame(columns=rb_cols)
     wr_pdf = pd.DataFrame(columns=wr_cols)
     te_pdf = pd.DataFrame(columns=te_cols)
+    error_logs = pd.DataFrame(columns=["href", "iter_counter","retry_counter","error_msg", "processed_time"])
     
 
     COUNTER=0
     start = time.perf_counter()
     start_total = time.perf_counter()
     print("\n\nPulling player gamelogs...")
-    for row in href_pdf.itertuples(index=False):
+    for row in tqdm(href_pdf.itertuples(index=False), desc="Scraping..."):
         COUNTER+=1
-        if COUNTER % 50 == 0:
-            print(f"Iteration: {COUNTER}")
-            end = time.perf_counter()
-            print(f"Execution time: {(end - start)/60:.2f} mins")
-            start = time.perf_counter()
+        success = False
+        attempts = 0
+        while not success and attempts < 3:  # max 3 attempts
+            try:
+                attempts += 1
+                # if COUNTER % 50 == 0:
+                #     print(f"Iteration: {COUNTER}")
+                #     end = time.perf_counter()
+                #     print(f"Execution time: {(end - start)/60:.2f} mins")
+                #     start = time.perf_counter()
 
-        url_s = 'https://www.pro-football-reference.com' + row.href + '/gamelog/'
+                url_s = 'https://www.pro-football-reference.com' + row.href + '/gamelog/'
 
-        html_raw = asyncio.run(get_html_w_playwright(url_s))
-        soup = bs4.BeautifulSoup(html_raw, 'html.parser')
+                html_raw = asyncio.run(get_html_w_playwright(url_s))
+                soup = bs4.BeautifulSoup(html_raw, 'html.parser')
 
-        meta_info = get_player_metadata(soup)
-        
-        # if meta_info["player_position"] not in POS_LIST:
-        #     continue
-        # else:
-        df = pd.read_html(url_s)[0]
-        df = pd.DataFrame(df)
+                meta_info = get_player_metadata(soup)
+                
+                # if meta_info["player_position"] not in POS_LIST:
+                #     continue
+                # else:
+                df = pd.read_html(url_s)[0]
+                df = pd.DataFrame(df)
 
-        #######Fix double-lined column names
-        cols = df.columns
-        col_names = []
-        for i in range(len(cols)):
-            ##fix col formatting
-            col_1 = re.sub(r"[ ./]", "_", str(cols[i][0]))
-            col_1 = re.sub(r"[%]", "_per", col_1)
+                #######Fix double-lined column names
+                cols = df.columns
+                col_names = []
+                for i in range(len(cols)):
+                    ##fix col formatting
+                    col_1 = re.sub(r"[ ./]", "_", str(cols[i][0]))
+                    col_1 = re.sub(r"[%]", "_per", col_1)
 
-            col_2 = re.sub(r"[ ./]", "_", str(cols[i][1]))
-            col_2 = re.sub(r"[%]", "_per", col_2)
-            if col_1.startswith('Unnamed'):
-                ## label home/away col with name
-                if col_2.startswith('Unnamed'):
-                    col_names.append('AT')
-                else:
-                    col_names.append(col_2)
-            else:
-                col_names.append( col_1 + '_' + col_2)
+                    col_2 = re.sub(r"[ ./]", "_", str(cols[i][1]))
+                    col_2 = re.sub(r"[%]", "_per", col_2)
+                    if col_1.startswith('Unnamed'):
+                        ## label home/away col with name
+                        if col_2.startswith('Unnamed'):
+                            col_names.append('AT')
+                        else:
+                            col_names.append(col_2)
+                    else:
+                        col_names.append( col_1 + '_' + col_2)
 
-        
+                
 
-        df = df.set_axis(col_names, axis=1)
+                df = df.set_axis(col_names, axis=1)
 
+                df = df[df["Rk"] != "Rk"]
+                df = df[~(pd.isna(df["Rk"]))]
 
-        try:
-            df = df[df["Rk"] != "Rk"]
-            df = df[~(pd.isna(df["Rk"]))]
-        except:
-            print(f"iter: {COUNTER}, skipped href: {row.href}")
-            continue
+                # df["Date"] = pd.to_datetime(df["Date"])
+                # df = df[df["Date"] >= DATE_CUTOFF]
 
-        # df["Date"] = pd.to_datetime(df["Date"])
-        # df = df[df["Date"] >= DATE_CUTOFF]
+                df["AT"] = df["AT"].apply(lambda x: 1 if x == "@" else 0)
+                df["GS"] = df["GS"].apply(lambda x: 1 if x == "*" else 0)
 
-        df["AT"] = df["AT"].apply(lambda x: 1 if x == "@" else 0)
-        df["GS"] = df["GS"].apply(lambda x: 1 if x == "*" else 0)
+                df["href"] = row.href
+                df["player_name"] = row.player_name
+                df["player_position"] = row.player_position
+                df["player_college"] = meta_info["player_college"]
 
-        df["href"] = row.href
-        df["player_name"] = row.player_name
-        df["player_position"] = row.player_position
-        df["player_college"] = meta_info["player_college"]
+                if (row.player_position == 'QB') & (df.shape[0] > 0):
+                    qb_pdf = safe_concat(qb_pdf, df, qb_cols)
+                    
+                elif (row.player_position == 'RB') & (df.shape[0] > 0):
+                    rb_pdf = safe_concat(rb_pdf, df, rb_cols)
 
-        if (row.player_position == 'QB') & (df.shape[0] > 0):
-            qb_pdf = safe_concat(qb_pdf, df, qb_cols)
-            
-        elif (row.player_position == 'RB') & (df.shape[0] > 0):
-            rb_pdf = safe_concat(rb_pdf, df, rb_cols)
+                elif (row.player_position == 'WR') & (df.shape[0] > 0):
+                    wr_pdf = safe_concat(wr_pdf, df, wr_cols)
 
-        elif (row.player_position == 'WR') & (df.shape[0] > 0):
-            wr_pdf = safe_concat(wr_pdf, df, wr_cols)
-
-        elif (row.player_position == 'TE')  & (df.shape[0] > 0):
-            te_pdf = safe_concat(te_pdf, df, te_cols)
-        else: 
-            print(f"skipped href: {row.href}; nothing appended...")
-            continue
+                elif (row.player_position == 'TE')  & (df.shape[0] > 0):
+                    te_pdf = safe_concat(te_pdf, df, te_cols)
+                else: 
+                    e = "Nothing to append!"
+                    time.sleep(1)
+                    error_logs.loc[len(df)] = [row.href, COUNTER, attempts, e, time.gmtime()]
+                    # print(f"skipped href: {row.href}; nothing appended...")
+                    # continue
+            except Exception as e:
+                # print(f"iter: {COUNTER}, skipped href: {row.href}") 
+                time.sleep(1)
+                error_logs.loc[len(df)] = [row.href, COUNTER, attempts, e, time.gmtime()]
+                # continue
  
     print("Completed pulling player gamelogs...")
     end_total = time.perf_counter()
     print(f"Total Execution time: {(end_total - start_total)/3600:.2f} hours")
 
-    return {"QB_gamelogs":qb_pdf, "RB_gamelogs":rb_pdf, "WR_gamelogs":wr_pdf, "TE_gamelogs":te_pdf}
+    if error_logs.shape[0] > 0: 
+        return {"QB_gamelogs":qb_pdf, "RB_gamelogs":rb_pdf, "WR_gamelogs":wr_pdf, "TE_gamelogs":te_pdf, "Error_logs":error_logs}
+    else:
+        return {"QB_gamelogs":qb_pdf, "RB_gamelogs":rb_pdf, "WR_gamelogs":wr_pdf, "TE_gamelogs":te_pdf}
 
 # def find_active_hrefs()

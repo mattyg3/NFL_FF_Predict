@@ -2,10 +2,11 @@
 # start = time.perf_counter()
 
 from utility_scripts.scraper_utils import pull_gamelogs, get_player_hrefs
+import time
 
-import string
-letters = list(string.ascii_uppercase)
-# letters = ['A', 'B', 'C']
+# import string
+# letters = list(string.ascii_uppercase)
+letters = ['A', 'B', 'C']
 
 href_pdf = get_player_hrefs(letters)
 print(f"Total Player Count to Pull: {href_pdf.shape[0]}")
@@ -14,9 +15,9 @@ results = pull_gamelogs(href_pdf)
 
 pos_list=['QB', 'RB', 'TE', 'WR']
 for pos in pos_list:
-    results[f"{pos}_gamelogs"].to_csv(f'scraped_data/SB_ERA_game_logs_{pos}.csv', index=False)
-    # results[f"{pos}_gamelogs"].to_csv(f'scraped_data/SB_ERA_game_logs_{pos}_{'_'.join(letters)}.csv', index=False)
-
+    # results[f"{pos}_gamelogs"].to_csv(f'scraped_data/SB_ERA_game_logs_{pos}.csv', index=False)
+    results[f"{pos}_gamelogs"].to_csv(f'scraped_data/SB_ERA_game_logs_{pos}_{'_'.join(letters)}.csv', index=False)
+results[f"error_logs"].to_csv(f'dev_files/error_logs_{time.gmtime()}.csv', index=False)
 # results["QB_gamelogs"].to_csv(f'scraped_data/SB_ERA_game_logs_QB_{letters}.csv', index=False)
 # results["RB_gamelogs"].to_csv(f'scraped_data/SB_ERA_game_logs_RB_{letters}.csv', index=False)
 # results["WR_gamelogs"].to_csv(f'scraped_data/SB_ERA_game_logs_WR_{letters}.csv', index=False)
