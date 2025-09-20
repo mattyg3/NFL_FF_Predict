@@ -43,40 +43,77 @@ import json
 
 #### Pro Football Reference scraping utility functions
 
+import asyncio
+from playwright.async_api import async_playwright
 
-def get_html_w_selenium(url):
+async def get_html_w_playwright(url: str) -> str:
     """
-    Fetch the raw HTML of a given URL using Selenium with Firefox.
-
-    - Uses Firefox with headless mode and disabled images, CSS, and Flash for faster loading.
-    - Opens the given URL, waits briefly, retrieves page source, then closes the browser.
-
+    Fetch the raw HTML of a given URL using Playwright with Firefox (or Chromium).
+    - Headless mode
+    - Blocks images and CSS for speed
     Args:
         url (str): The URL of the webpage to scrape.
 
     Returns:
         str: Raw HTML content of the webpage.
     """
+    async with async_playwright() as p:
+        # Launch Firefox headless
+        browser = await p.firefox.launch(headless=True)
+        context = await browser.new_context(
+            viewport={"width": 1920, "height": 1080}
+        )
 
-    #selenium options
-    options = Options()
-    ##Disable images, CSS, and other unnecessary content
-    options.set_preference("permissions.default.image", 2)   # Block images
-    options.set_preference("permissions.default.stylesheet", 2)  # Block CSS
-    options.set_preference("dom.ipc.plugins.enabled.libflashplayer.so", "false")  # Disable Flash
+        # Block images and CSS for faster loading
+        await context.route("**/*", lambda route: (
+            route.abort()
+            if route.request.resource_type in ("image", "stylesheet")
+            else route.continue_()
+        ))
 
-    options.add_argument("--headless")
-    options.add_argument("--width=1920")
-    options.add_argument("--height=1080")
+        page = await context.new_page()
+        await page.goto(url, wait_until="domcontentloaded")
 
-    #Selenium to open, grab html, then close
-    driver = webdriver.Firefox(options=options)
-    driver.get(url)
-    time.sleep(1)
-    html_raw = driver.page_source
-    driver.close()
+        # Grab raw HTML
+        html_raw = await page.content()
 
-    return html_raw
+        await browser.close()
+        return html_raw
+
+
+# def get_html_w_selenium(url):
+#     """
+#     Fetch the raw HTML of a given URL using Selenium with Firefox.
+
+#     - Uses Firefox with headless mode and disabled images, CSS, and Flash for faster loading.
+#     - Opens the given URL, waits briefly, retrieves page source, then closes the browser.
+
+#     Args:
+#         url (str): The URL of the webpage to scrape.
+
+#     Returns:
+#         str: Raw HTML content of the webpage.
+#     """
+
+#     #selenium options
+#     options = Options()
+#     ##Disable images, CSS, and other unnecessary content
+#     options.set_preference("permissions.default.image", 2)   # Block images
+#     options.set_preference("permissions.default.stylesheet", 2)  # Block CSS
+#     options.set_preference("dom.ipc.plugins.enabled.libflashplayer.so", "false")  # Disable Flash
+
+#     options.add_argument("--headless")
+#     options.add_argument("--width=1920")
+#     options.add_argument("--height=1080")
+
+#     #Selenium to open, grab html, then close
+#     driver = webdriver.Firefox(options=options)
+#     driver.get(url)
+#     time.sleep(1)
+#     html_raw = driver.page_source
+#     driver.close()
+
+#     return html_raw
 
 
 def get_player_hrefs(letters):
@@ -113,7 +150,7 @@ def get_player_hrefs(letters):
         print(f"Pulling from: {alpha}")
         url_s =  'https://www.pro-football-reference.com/players/' + alpha + '/'
 
-        html_raw = get_html_w_selenium(url_s)
+        html_raw = asyncio.run(get_html_w_playwright(url_s))
 
         ##Parse html with bs4, grab player hrefs
         soup = bs4.BeautifulSoup(html_raw, 'html.parser')
@@ -301,7 +338,7 @@ def pull_gamelogs(href_pdf: list[str]):
 
         url_s = 'https://www.pro-football-reference.com' + row.href + '/gamelog/'
 
-        html_raw = get_html_w_selenium(url_s)
+        html_raw = asyncio.run(get_html_w_playwright(url_s))
         soup = bs4.BeautifulSoup(html_raw, 'html.parser')
 
         meta_info = get_player_metadata(soup)

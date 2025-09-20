@@ -1,7 +1,6 @@
 bs4
 pandas
-# re
-# time
 selenium
-# json
-# string
+asyncio
+playwright
+lxml
